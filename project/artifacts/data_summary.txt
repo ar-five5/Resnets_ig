@@ -1,0 +1,11 @@
+Data Summary (CIFAR-10H)
+==============================
+Entropy mean (bits): 0.222838
+Entropy min (bits): -0.000000
+Entropy max (bits): 2.860176
+
+Configured split sizes:
+train: 6000
+val: 2000
+test: 2000
+total: 10000

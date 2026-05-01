@@ -1,0 +1,32 @@
+{
+  "locked_at": "2026-05-02T01:10:38",
+  "note": "Final locked outputs; no retraining performed for this lock.",
+  "best_finetune_val_kl": 0.21351168870925905,
+  "files": {
+    "best_model.pt": {
+      "sha256": "97639aaae94f8d1179bb36dcce1591606e585441424e05270c90ed2e50628652",
+      "bytes": 45290874,
+      "last_modified": "2026-05-01T23:55:23"
+    },
+    "training_log.csv": {
+      "sha256": "7e7479e0ca25852b35c21395d0e6517e934210c7f4d2d3326e5d1c04290e45b0",
+      "bytes": 3026,
+      "last_modified": "2026-05-01T23:59:10"
+    },
+    "artifacts/training_loss_curve.png": {
+      "sha256": "1644d6ff0706f70942fc8e8044b34de674721a3b8f53c2e59c025018a8f1dcef",
+      "bytes": 76072,
+      "last_modified": "2026-05-02T00:50:01"
+    },
+    "artifacts/validation_loss_curve.png": {
+      "sha256": "497c00d8beccaf00114945b2f6958d60d07624e818a1cb42fb2f274003434510",
+      "bytes": 85816,
+      "last_modified": "2026-05-02T00:50:01"
+    },
+    "artifacts/phase2_kl_curve.png": {
+      "sha256": "103d1dfe5e3d0354d3ea9e5648860c923bf65507aa331489f60a4c7a0f9926ec",
+      "bytes": 79452,
+      "last_modified": "2026-05-02T00:50:02"
+    }
+  }
+}
