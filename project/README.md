@@ -36,6 +36,16 @@ Generate required artifacts (no retraining):
 python src/generate_artifacts.py
 ```
 
+Run evaluation (CIFAR-10H test split):
+```bash
+python src/evaluate.py
+```
+
+Metrics are saved to:
+```text
+project/artifacts/evaluation_metrics.txt
+```
+
 ## Outputs (saved in `project/`)
 - `best_model_phase1.pt`
 - `best_model.pt`

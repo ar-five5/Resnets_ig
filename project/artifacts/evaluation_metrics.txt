@@ -1,0 +1,8 @@
+----------------------------------
+Evaluation Results (CIFAR-10H Test)
+----------------------------------
+KL Divergence       : 0.2288
+JSD                 : 0.0498
+Cosine Similarity   : 0.9423
+Top-1 Accuracy      : 92.60 %
+----------------------------------
