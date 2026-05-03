@@ -11,10 +11,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 CONFIG = {
-    # Global random seed for reproducible splits and training.
     "random_seed": 42,
 
-    # Batch size used for all DataLoaders.
     "batch_size": 128,
 
     # Adam learning rate for Phase 1: CIFAR-10 hard-label pretraining.
@@ -39,16 +37,12 @@ CONFIG = {
     # CIFAR-10H has 10,000 soft-label examples only.
     "cifar10h_split": {"train": 6000, "val": 2000, "test": 2000},
 
-    # Patience for early stopping during training.
     "early_stopping_patience": 10,
 
-    # Path for saving the best model checkpoint.
     "checkpoint_path": str(PROJECT_ROOT / "best_model.pt"),
 
-    # CSV path for epoch-level logs.
     "log_path": str(PROJECT_ROOT / "training_log.csv"),
 
-    # Automatically choose the best available device.
     "device": (
         "cuda"
         if torch.cuda.is_available()
@@ -57,7 +51,6 @@ CONFIG = {
         else "cpu"
     ),
 
-    # Number of DataLoader worker processes.
     "num_workers": 2,
 }
 

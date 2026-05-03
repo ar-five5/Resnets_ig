@@ -1,18 +1,8 @@
 """
 model.py - CIFAR-adapted ResNet-18 for predicting annotator disagreement.
 
-Why we change the first convolution:
-- CIFAR images are only 32x32, so a 7x7, stride-2 stem downsamples too
-  aggressively and discards useful local detail early.
-- We switch to 3x3, stride-1, padding-1 so spatial detail is preserved.
-
-Why we use a 2-layer MLP head:
-- A 512->256->10 head has more expressive capacity than a single linear layer.
-- It remains small and interpretable, which is suitable for a strong baseline.
-
-Why there is no softmax in the model:
-- The model returns raw logits for numerical stability.
-- Softmax or log_softmax should be applied inside the loss/evaluation code.
+3x3 stride-1 stem (preserves 32x32 detail), no maxpool, 2-layer MLP head (512->256->10).
+Returns raw logits; apply softmax/log_softmax in loss/eval code.
 """
 
 import torch
@@ -40,7 +30,6 @@ def build_resnet18_cifar() -> nn.Module:
     )
     model.maxpool = nn.Identity()
 
-    # Replace single linear head with a 2-layer MLP head.
     in_features = model.fc.in_features
     model.fc = nn.Sequential(
         nn.Linear(in_features, 256),

@@ -1,4 +1,4 @@
-﻿"""Generate required data/training artifacts from existing CIFAR-10H outputs."""
+"""Generate required data/training artifacts from existing CIFAR-10H outputs."""
 
 from __future__ import annotations
 
@@ -261,6 +261,123 @@ def save_validation_loss_curve(rows: List[Dict[str, float | int | str]], out_pat
     plt.close()
 
 
+def save_architecture_diagram(out_path: Path) -> None:
+    """Save a static architecture diagram of the CIFAR-adapted ResNet-18."""
+    blocks = [
+        ("Input", "32 x 32 x 3", "#DDE5F0"),
+        ("Stem\n3x3 conv s=1, BN, ReLU\n(no maxpool)", "32 x 32 x 64", "#A6BDDB"),
+        ("Layer 1\n2 x BasicBlock", "32 x 32 x 64", "#74A9CF"),
+        ("Layer 2\n2 x BasicBlock, s=2", "16 x 16 x 128", "#3690C0"),
+        ("Layer 3\n2 x BasicBlock, s=2", "8 x 8 x 256", "#0570B0"),
+        ("Layer 4\n2 x BasicBlock, s=2", "4 x 4 x 512", "#034E7B"),
+        ("Adaptive AvgPool", "1 x 1 x 512", "#A6BDDB"),
+        ("Head MLP\nLinear(512 -> 256), ReLU\nLinear(256 -> 10)", "10 logits", "#F58518"),
+        ("Softmax / log_softmax\n(applied in loss / eval)", "10 probs", "#FFD27F"),
+    ]
+
+    fig_height = 1.1 * len(blocks) + 1.0
+    fig, ax = plt.subplots(figsize=(8.5, fig_height))
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, fig_height)
+    ax.axis("off")
+
+    box_height = 0.85
+    spacing = 1.05
+    box_x = 1.0
+    box_w = 5.5
+    n = len(blocks)
+
+    for i, (name, shape, color) in enumerate(blocks):
+        y = fig_height - 0.6 - i * spacing
+        rect = plt.Rectangle(
+            (box_x, y - box_height / 2),
+            box_w,
+            box_height,
+            facecolor=color,
+            edgecolor="#222222",
+            linewidth=1.2,
+        )
+        ax.add_patch(rect)
+        ax.text(
+            box_x + box_w / 2,
+            y,
+            name,
+            ha="center",
+            va="center",
+            fontsize=9,
+            color="black" if color not in {"#0570B0", "#034E7B"} else "white",
+        )
+        ax.text(
+            box_x + box_w + 0.4,
+            y,
+            shape,
+            ha="left",
+            va="center",
+            fontsize=9,
+            color="#333333",
+        )
+
+        if i < n - 1:
+            arrow_y_top = y - box_height / 2
+            arrow_y_bot = arrow_y_top - (spacing - box_height)
+            ax.annotate(
+                "",
+                xy=(box_x + box_w / 2, arrow_y_bot),
+                xytext=(box_x + box_w / 2, arrow_y_top),
+                arrowprops=dict(arrowstyle="->", color="#444444", lw=1.2),
+            )
+
+    ax.text(
+        5.0,
+        fig_height - 0.1,
+        "CIFAR-adapted ResNet-18 (Phase 2 model)",
+        ha="center",
+        va="top",
+        fontsize=12,
+        fontweight="bold",
+    )
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+
+def save_entropy_scatter(
+    pred_entropy: np.ndarray,
+    true_entropy: np.ndarray,
+    out_path: Path,
+) -> None:
+    """Save a scatter plot of predicted vs true distribution entropy."""
+    plt.figure(figsize=(6, 6))
+    plt.scatter(true_entropy, pred_entropy, s=8, alpha=0.4, color="#4C78A8")
+
+    max_h = float(np.log2(10.0))
+    plt.plot([0, max_h], [0, max_h], color="#E45756", linestyle="--", linewidth=1, label="y = x")
+
+    plt.xlim(0, max_h)
+    plt.ylim(0, max_h)
+    plt.xlabel("True entropy (bits)")
+    plt.ylabel("Predicted entropy (bits)")
+    plt.title("Predicted vs True Entropy (CIFAR-10H Test)")
+    plt.legend(loc="upper left")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200)
+    plt.close()
+
+
+def _compute_entropy_pair(artifacts_dir: Path) -> Optional[tuple]:
+    """Load saved test predictions and targets, return (pred_entropy, true_entropy) or None."""
+    pred_path = artifacts_dir / "test_predictions.npy"
+    target_path = artifacts_dir / "test_targets.npy"
+    if not pred_path.is_file() or not target_path.is_file():
+        return None
+
+    predictions = np.load(pred_path)
+    targets = np.load(target_path)
+    return compute_entropy_bits(predictions), compute_entropy_bits(targets)
+
+
 def save_phase2_kl_curve(
     rows: List[Dict[str, float | int | str]],
     out_path: Path,
@@ -404,6 +521,16 @@ def generate_full_artifacts(project_root: Path, artifacts_dir: Path) -> List[Pat
     data_summary_path = artifacts_dir / "data_summary.txt"
     write_data_summary(entropies, CONFIG["cifar10h_split"], data_summary_path)
     created_files.append(data_summary_path)
+
+    entropy_pair = _compute_entropy_pair(artifacts_dir)
+    if entropy_pair is not None:
+        scatter_path = artifacts_dir / "entropy_scatter.png"
+        save_entropy_scatter(entropy_pair[0], entropy_pair[1], scatter_path)
+        created_files.append(scatter_path)
+
+    arch_path = artifacts_dir / "architecture_diagram.png"
+    save_architecture_diagram(arch_path)
+    created_files.append(arch_path)
 
     return created_files
 

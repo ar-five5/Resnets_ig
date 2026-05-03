@@ -28,12 +28,7 @@ except ImportError:
 
 
 def set_random_seed(seed: int) -> None:
-    """
-    Set random seed for Python, NumPy, and PyTorch.
-
-    Args:
-        seed: Random seed value.
-    """
+    """Set random seed for Python, NumPy, and PyTorch."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -42,15 +37,7 @@ def set_random_seed(seed: int) -> None:
 
 
 def resolve_device(config: dict) -> torch.device:
-    """
-    Resolve torch device from config with safe fallback.
-
-    Args:
-        config: Global configuration dictionary.
-
-    Returns:
-        torch.device object.
-    """
+    """Resolve torch device from config with safe fallback."""
     requested = str(config.get("device", "cpu")).lower()
     if requested == "cuda" and torch.cuda.is_available():
         return torch.device("cuda")
@@ -60,12 +47,7 @@ def resolve_device(config: dict) -> torch.device:
 
 
 def init_log_file(log_path: str) -> None:
-    """
-    Initialize the CSV training log with the required header.
-
-    Args:
-        log_path: Output CSV path.
-    """
+    """Initialize the CSV training log with header: epoch,phase,train_loss,val_loss."""
     parent = os.path.dirname(log_path)
     if parent:
         os.makedirs(parent, exist_ok=True)
@@ -76,16 +58,7 @@ def init_log_file(log_path: str) -> None:
 
 
 def append_log_row(log_path: str, epoch: int, phase: str, train_loss: float, val_loss: float) -> None:
-    """
-    Append one epoch entry to the CSV log.
-
-    Args:
-        log_path: Output CSV path.
-        epoch: Epoch number (1-based).
-        phase: "pretrain" or "finetune".
-        train_loss: Mean train loss for the epoch.
-        val_loss: Mean validation loss for the epoch.
-    """
+    """Append one epoch row (epoch, phase, train_loss, val_loss) to the CSV log."""
     with open(log_path, "a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
         writer.writerow([epoch, phase, float(train_loss), float(val_loss)])
@@ -233,7 +206,6 @@ def pretrain_phase(
     Returns:
         Dict with best phase metrics.
     """
-    # -- PHASE 1: PRETRAINING --
     train_loader, val_loader = build_cifar10_pretrain_loaders(config)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
@@ -348,7 +320,6 @@ def finetune_phase(
     Returns:
         Dict with best phase metrics.
     """
-    # -- PHASE 2: FINE-TUNING --
     if not os.path.isfile(phase1_ckpt_path):
         raise FileNotFoundError(f"Missing Phase 1 checkpoint: {phase1_ckpt_path}")
 

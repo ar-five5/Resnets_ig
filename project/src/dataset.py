@@ -76,7 +76,7 @@ def load_cifar10h(data_dir: str = None) -> Tuple[np.ndarray, np.ndarray]:
         )
 
     entropies = _entropy_bits(soft_labels)
-    # Entropy bounds for a 10-class distribution are [0, log2(10)].
+    # bounds: [0, log2(10)]
     if entropies.min() < -1e-6 or entropies.max() > ENTROPY_MAX + 1e-6:
         raise AssertionError(
             f"Entropy out of expected range [0, log2(10)]: min={entropies.min():.6f}, max={entropies.max():.6f}"
@@ -107,17 +107,10 @@ class CIFAR10HDataset(Dataset):
         self._to_tensor = transforms.ToTensor()
 
     def __len__(self) -> int:
-        """Return the number of samples in the dataset."""
         return len(self.images)
 
     def __getitem__(self, index: int):
-        """
-        Return one sample as `(image_tensor, soft_label_tensor)`.
-
-        Returns:
-            image_tensor: Tensor with shape (3, 32, 32)
-            soft_label_tensor: Float32 tensor with shape (10,)
-        """
+        """Return (image_tensor: (3,32,32), soft_label_tensor: (10,))."""
         image = Image.fromarray(self.images[index])
         if self.transform is not None:
             image_tensor = self.transform(image)
@@ -174,7 +167,6 @@ def get_dataloaders(config: dict):
         ]
     )
 
-    # Advanced indexing creates split-specific arrays, keeping dataset logic simple.
     train_dataset = CIFAR10HDataset(images[train_idx], soft_labels[train_idx], transform=train_transform)
     val_dataset = CIFAR10HDataset(images[val_idx], soft_labels[val_idx], transform=eval_transform)
     test_dataset = CIFAR10HDataset(images[test_idx], soft_labels[test_idx], transform=eval_transform)

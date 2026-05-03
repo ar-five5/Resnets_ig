@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+.claude-helper.log
+project/smoke_outputs/
+project/data/cifar-10-batches-py/
+project/data/cifar-10-python.tar.gz

@@ -47,15 +47,7 @@ CIFAR10_CLASSES = [
 
 
 def resolve_device(config: dict) -> torch.device:
-    """
-    Resolve torch device from config with safe fallback.
-
-    Args:
-        config: Global configuration dictionary.
-
-    Returns:
-        torch.device object.
-    """
+    """Resolve torch device from config with safe fallback."""
     requested = str(config.get("device", "cpu")).lower()
     if requested == "cuda" and torch.cuda.is_available():
         return torch.device("cuda")
