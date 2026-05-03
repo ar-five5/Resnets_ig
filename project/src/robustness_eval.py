@@ -2,7 +2,6 @@
 robustness_eval.py - robustness evaluation under input corruptions.
 """
 
-import os
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -22,6 +21,7 @@ try:
         load_cifar10h,
     )
     from .model import build_resnet18_cifar
+    from .utils import load_checkpoint, resolve_device
 except ImportError:
     from config import CONFIG
     from dataset import (
@@ -32,37 +32,7 @@ except ImportError:
         load_cifar10h,
     )
     from model import build_resnet18_cifar
-
-
-def resolve_device(config: dict) -> torch.device:
-    """Resolve torch device from config with safe fallback."""
-    requested = str(config.get("device", "cpu")).lower()
-    if requested == "cuda" and torch.cuda.is_available():
-        return torch.device("cuda")
-    if requested == "mps" and torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
-
-
-def load_checkpoint(model: torch.nn.Module, checkpoint_path: str, device: torch.device) -> None:
-    """
-    Load checkpoint weights into the model.
-
-    Args:
-        model: Model to populate with weights.
-        checkpoint_path: Path to the checkpoint file.
-        device: Torch device for map_location.
-    """
-    if not os.path.isfile(checkpoint_path):
-        raise FileNotFoundError(f"Missing checkpoint: {checkpoint_path}")
-
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    if isinstance(checkpoint, dict) and "model_state" in checkpoint:
-        state_dict = checkpoint["model_state"]
-    else:
-        state_dict = checkpoint
-
-    model.load_state_dict(state_dict)
+    from utils import load_checkpoint, resolve_device
 
 
 def normalize_batch(batch: torch.Tensor) -> torch.Tensor:

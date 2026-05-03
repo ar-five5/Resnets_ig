@@ -15,10 +15,12 @@ try:
     from .config import CONFIG
     from .dataset import load_cifar10h
     from .model import build_resnet18_cifar
+    from .utils import entropy_bits_np
 except ImportError:
     from config import CONFIG
     from dataset import load_cifar10h
     from model import build_resnet18_cifar
+    from utils import entropy_bits_np
 
 
 CIFAR10_CLASSES = [
@@ -35,10 +37,7 @@ CIFAR10_CLASSES = [
 ]
 
 
-def compute_entropy_bits(soft_labels: np.ndarray) -> np.ndarray:
-    """Compute Shannon entropy in bits for each soft-label distribution."""
-    safe = np.clip(soft_labels, 1e-12, 1.0)
-    return -np.sum(soft_labels * np.log2(safe), axis=1)
+_ARCH_DARK_COLORS = {"#0570B0", "#034E7B"}
 
 
 def ensure_artifacts_dir(project_root: Path) -> Path:
@@ -199,66 +198,40 @@ def save_low_high_entropy_examples(
     plt.close(fig)
 
 
-def save_training_loss_curve(rows: List[Dict[str, float | int | str]], out_path: Path) -> None:
-    """Save train-loss curves for pretrain and finetune phases."""
+def _save_loss_curve(
+    rows: List[Dict[str, float | int | str]],
+    out_path: Path,
+    loss_field: str,
+    y_label: str,
+    title: str,
+    pretrain_label: str,
+    finetune_label: str,
+) -> None:
     pretrain = [row for row in rows if row["phase"] == "pretrain"]
     finetune = [row for row in rows if row["phase"] == "finetune"]
-
     plt.figure(figsize=(8, 5))
     if pretrain:
-        plt.plot(
-            [row["epoch"] for row in pretrain],
-            [row["train_loss"] for row in pretrain],
-            marker="o",
-            label="Phase 1 (pretrain)",
-        )
+        plt.plot([row["epoch"] for row in pretrain], [row[loss_field] for row in pretrain], marker="o", label=pretrain_label)
     if finetune:
-        plt.plot(
-            [row["epoch"] for row in finetune],
-            [row["train_loss"] for row in finetune],
-            marker="o",
-            label="Phase 2 (finetune)",
-        )
-
+        plt.plot([row["epoch"] for row in finetune], [row[loss_field] for row in finetune], marker="o", label=finetune_label)
     plt.xlabel("Epoch")
-    plt.ylabel("Train loss")
-    plt.title("Training Loss Curves")
+    plt.ylabel(y_label)
+    plt.title(title)
     plt.legend()
     plt.grid(alpha=0.3)
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
     plt.close()
+
+
+def save_training_loss_curve(rows: List[Dict[str, float | int | str]], out_path: Path) -> None:
+    """Save train-loss curves for pretrain and finetune phases."""
+    _save_loss_curve(rows, out_path, "train_loss", "Train loss", "Training Loss Curves", "Phase 1 (pretrain)", "Phase 2 (finetune)")
 
 
 def save_validation_loss_curve(rows: List[Dict[str, float | int | str]], out_path: Path) -> None:
     """Save validation-loss curves for pretrain and finetune phases."""
-    pretrain = [row for row in rows if row["phase"] == "pretrain"]
-    finetune = [row for row in rows if row["phase"] == "finetune"]
-
-    plt.figure(figsize=(8, 5))
-    if pretrain:
-        plt.plot(
-            [row["epoch"] for row in pretrain],
-            [row["val_loss"] for row in pretrain],
-            marker="o",
-            label="Phase 1 val loss (CE)",
-        )
-    if finetune:
-        plt.plot(
-            [row["epoch"] for row in finetune],
-            [row["val_loss"] for row in finetune],
-            marker="o",
-            label="Phase 2 val loss (KL)",
-        )
-
-    plt.xlabel("Epoch")
-    plt.ylabel("Validation loss")
-    plt.title("Validation Loss Curves")
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=200)
-    plt.close()
+    _save_loss_curve(rows, out_path, "val_loss", "Validation loss", "Validation Loss Curves", "Phase 1 val loss (CE)", "Phase 2 val loss (KL)")
 
 
 def save_architecture_diagram(out_path: Path) -> None:
@@ -305,7 +278,7 @@ def save_architecture_diagram(out_path: Path) -> None:
             ha="center",
             va="center",
             fontsize=9,
-            color="black" if color not in {"#0570B0", "#034E7B"} else "white",
+            color="black" if color not in _ARCH_DARK_COLORS else "white",
         )
         ax.text(
             box_x + box_w + 0.4,
@@ -375,7 +348,7 @@ def _compute_entropy_pair(artifacts_dir: Path) -> Optional[tuple]:
 
     predictions = np.load(pred_path)
     targets = np.load(target_path)
-    return compute_entropy_bits(predictions), compute_entropy_bits(targets)
+    return entropy_bits_np(predictions), entropy_bits_np(targets)
 
 
 def save_phase2_kl_curve(
@@ -489,7 +462,7 @@ def generate_full_artifacts(project_root: Path, artifacts_dir: Path) -> List[Pat
     """Generate all data-stage, training, and summary artifacts."""
     data_dir = project_root / "data"
     images, soft_labels = load_cifar10h(data_dir=str(data_dir))
-    entropies = compute_entropy_bits(soft_labels)
+    entropies = entropy_bits_np(soft_labels)
     majority_class = np.argmax(soft_labels, axis=1)
 
     created_files: List[Path] = []

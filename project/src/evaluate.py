@@ -2,7 +2,6 @@
 evaluate.py - evaluation metrics for CIFAR-10H test split.
 """
 
-import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -14,40 +13,17 @@ try:
     from .config import CONFIG
     from .dataset import get_dataloaders
     from .model import build_resnet18_cifar
+    from .utils import entropy_bits_np, load_checkpoint, resolve_device
 except ImportError:
     from config import CONFIG
     from dataset import get_dataloaders
     from model import build_resnet18_cifar
+    from utils import entropy_bits_np, load_checkpoint, resolve_device
 
 
 PRECISION_K_VALUES = (100, 200, 500)
 BOOTSTRAP_RESAMPLES = 1000
 BOOTSTRAP_SEED = 42
-
-
-def resolve_device(config: dict) -> torch.device:
-    """Resolve torch device from config with safe fallback."""
-    requested = str(config.get("device", "cpu")).lower()
-    if requested == "cuda" and torch.cuda.is_available():
-        return torch.device("cuda")
-    if requested == "mps" and torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
-
-
-def load_checkpoint(model: torch.nn.Module, checkpoint_path: str, device: torch.device) -> Dict:
-    """Load checkpoint weights into the model."""
-    if not os.path.isfile(checkpoint_path):
-        raise FileNotFoundError(f"Missing checkpoint: {checkpoint_path}")
-
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    if isinstance(checkpoint, dict) and "model_state" in checkpoint:
-        state_dict = checkpoint["model_state"]
-    else:
-        state_dict = checkpoint
-
-    model.load_state_dict(state_dict)
-    return checkpoint if isinstance(checkpoint, dict) else {}
 
 
 def kl_divergence_np(target: np.ndarray, prediction: np.ndarray, eps: float = 1e-12) -> np.ndarray:
@@ -68,12 +44,6 @@ def cosine_similarity_np(target: np.ndarray, prediction: np.ndarray, eps: float 
     num = np.sum(target * prediction, axis=1)
     denom = np.linalg.norm(target, axis=1) * np.linalg.norm(prediction, axis=1) + eps
     return num / denom
-
-
-def entropy_bits_np(distributions: np.ndarray, eps: float = 1e-12) -> np.ndarray:
-    """Shannon entropy in bits per row."""
-    safe = np.clip(distributions, eps, 1.0)
-    return -np.sum(distributions * np.log2(safe), axis=1)
 
 
 def pearson_corr(x: np.ndarray, y: np.ndarray) -> float:
@@ -181,12 +151,10 @@ def bootstrap_mean_std(
     """Bootstrap (mean, std) for each per-sample metric vector."""
     n = len(next(iter(per_sample.values())))
     rng = np.random.default_rng(seed)
+    all_indices = rng.integers(0, n, size=(n_resamples, n))
     results: Dict[str, Tuple[float, float]] = {}
     for name, values in per_sample.items():
-        boot_means = np.empty(n_resamples, dtype=np.float64)
-        for i in range(n_resamples):
-            idx = rng.integers(0, n, size=n)
-            boot_means[i] = float(values[idx].mean())
+        boot_means = values[all_indices].mean(axis=1)
         results[name] = (float(boot_means.mean()), float(boot_means.std(ddof=1)))
     return results
 
@@ -200,19 +168,14 @@ def save_metrics(
 ) -> None:
     """Save evaluation metrics to a text file."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    kl = point_estimates["kl"]
-    jsd = point_estimates["jsd"]
-    cosine = point_estimates["cosine"]
-    top1 = point_estimates["correct"]
-
     with output_path.open("w", encoding="utf-8") as file:
         file.write("----------------------------------\n")
         file.write("Evaluation Results (CIFAR-10H Test)\n")
         file.write("----------------------------------\n")
-        file.write(f"KL Divergence       : {kl:.4f}\n")
-        file.write(f"JSD                 : {jsd:.4f}\n")
-        file.write(f"Cosine Similarity   : {cosine:.4f}\n")
-        file.write(f"Top-1 Accuracy      : {top1 * 100.0:.2f} %\n")
+        file.write(f"KL Divergence       : {point_estimates['kl']:.4f}\n")
+        file.write(f"JSD                 : {point_estimates['jsd']:.4f}\n")
+        file.write(f"Cosine Similarity   : {point_estimates['cosine']:.4f}\n")
+        file.write(f"Top-1 Accuracy      : {point_estimates['correct'] * 100.0:.2f} %\n")
         file.write("----------------------------------\n")
         file.write("Bootstrap (n=1000) mean ± std\n")
         file.write("----------------------------------\n")

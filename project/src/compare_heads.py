@@ -27,6 +27,7 @@ try:
         set_backbone_requires_grad,
         set_random_seed,
     )
+    from .utils import load_checkpoint
 except ImportError:
     from config import CONFIG
     from dataset import get_dataloaders
@@ -42,6 +43,7 @@ except ImportError:
         set_backbone_requires_grad,
         set_random_seed,
     )
+    from utils import load_checkpoint
 
 
 def kl_divergence(target: torch.Tensor, prediction: torch.Tensor, eps: float = 1e-12) -> torch.Tensor:
@@ -408,23 +410,6 @@ def evaluate_model(model: nn.Module, test_loader, device: torch.device) -> Tuple
         raise ValueError("Non-finite evaluation metric detected (NaN or inf).")
 
     return kl_mean, jsd_mean, cosine_mean, top1_acc
-
-
-def load_checkpoint(model: nn.Module, checkpoint_path: str, device: torch.device) -> None:
-    """
-    Load checkpoint weights into the model.
-
-    Args:
-        model: Model to populate with weights.
-        checkpoint_path: Path to the checkpoint file.
-        device: Torch device for map_location.
-    """
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    if isinstance(checkpoint, dict) and "model_state" in checkpoint:
-        state_dict = checkpoint["model_state"]
-    else:
-        state_dict = checkpoint
-    model.load_state_dict(state_dict)
 
 
 def train_and_evaluate(

@@ -21,10 +21,12 @@ try:
     from .config import CONFIG
     from .dataset import CIFAR10_MEAN, CIFAR10_STD, get_dataloaders, get_default_data_dir
     from .model import build_resnet18_cifar
+    from .utils import resolve_device
 except ImportError:
     from config import CONFIG
     from dataset import CIFAR10_MEAN, CIFAR10_STD, get_dataloaders, get_default_data_dir
     from model import build_resnet18_cifar
+    from utils import resolve_device
 
 
 def set_random_seed(seed: int) -> None:
@@ -34,16 +36,6 @@ def set_random_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
-
-def resolve_device(config: dict) -> torch.device:
-    """Resolve torch device from config with safe fallback."""
-    requested = str(config.get("device", "cpu")).lower()
-    if requested == "cuda" and torch.cuda.is_available():
-        return torch.device("cuda")
-    if requested == "mps" and torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
 
 
 def init_log_file(log_path: str) -> None:
